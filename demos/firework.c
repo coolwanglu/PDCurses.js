@@ -30,6 +30,12 @@ void main_loop()
     if(ml_func == 0) {
         myrefresh(); 
         if(ml_step == 0) {
+            if(getch() != ERR) {
+                emscripten_cancel_main_loop();
+                endwin();
+                printf("Done.\n");
+            }
+
             do {
                 ml_start = rand() % (COLS - 3);
                 ml_end = rand() % (COLS - 3);
@@ -113,15 +119,14 @@ int main(int argc, char **argv)
     ml_flag = 0;
        
     // for emscripten
+    printf("Press any key to stop.\n");
     ml_step = 0;
     ml_func = 0;
     ml_do_erase = 0;
     emscripten_set_main_loop(main_loop, 1000 / DELAYSIZE);
-
-    endwin();
-
     return 0;
 }
+
 
 void explode()
 {
