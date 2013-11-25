@@ -1,0 +1,1 @@
+PDCursed compiled with emscripten
