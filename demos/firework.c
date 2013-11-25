@@ -12,7 +12,7 @@
 
 void myrefresh(void);
 void get_color(void);
-void explode(int, int);
+void explode(void);
 
 short color_table[] =
 {
@@ -20,9 +20,79 @@ short color_table[] =
     COLOR_RED, COLOR_MAGENTA, COLOR_YELLOW, COLOR_WHITE
 };
 
+// modified for emscripten
+int ml_start, ml_end, ml_row, ml_diff, ml_flag, ml_direction;
+int ml_step, ml_func;
+int ml_explode_row, ml_explode_col;
+int ml_do_erase;
+void main_loop()
+{
+    if(ml_func == 0) {
+        myrefresh(); 
+        if(ml_step == 0) {
+            do {
+                ml_start = rand() % (COLS - 3);
+                ml_end = rand() % (COLS - 3);
+                ml_start = (ml_start < 2) ? 2 : ml_start;
+                ml_end = (ml_end < 2) ? 2 : ml_end;
+                ml_direction = (ml_start > ml_end) ? -1 : 1;
+                ml_diff = abs(ml_start - ml_end);
+            } while (ml_diff < 2 || ml_diff >= LINES - 2);
+
+            attrset(A_NORMAL);
+
+            ml_row = 0;
+            ++ml_step;
+        }
+
+        while(ml_row < ml_diff)
+        {
+            if(ml_do_erase)
+            {
+                erase();
+                ml_do_erase = 0;
+            }
+            mvaddstr(LINES - ml_row, ml_row * ml_direction + ml_start,
+                    (ml_direction < 0) ? "\\" : "/");
+
+            if (ml_flag++)
+            {
+                ml_flag = 0;
+                ++ml_row;
+                ml_do_erase = 1;
+                return;
+            }
+
+            ++ml_row;
+        }
+        ml_do_erase = 0;
+
+        if (ml_flag++)
+        {
+            ml_flag = 0;
+            ml_func = 1;
+            ml_step = 0;
+            return;
+        }
+
+        ml_func = 1;
+        ml_step = 0;
+    } 
+        
+    if(ml_func == 1) {
+        if(ml_step == 0) {
+            ml_explode_row = LINES - ml_row;
+            ml_explode_col = ml_diff * ml_direction + ml_start;
+        }
+
+        explode();
+        return;
+    }
+}
+
 int main(int argc, char **argv)
 {
-    int i, start, end, row, diff, flag, direction, seed;
+    int i, seed;
 
 #ifdef XCURSES
     Xinitscr(argc, argv);
@@ -40,103 +110,84 @@ int main(int argc, char **argv)
 
     seed = time((time_t *)0);
     srand(seed);
-    flag = 0;
+    ml_flag = 0;
        
-    while (getch() == ERR)      /* loop until a key is hit */
-    {
-        do {
-            start = rand() % (COLS - 3);
-            end = rand() % (COLS - 3);
-            start = (start < 2) ? 2 : start;
-            end = (end < 2) ? 2 : end;
-            direction = (start > end) ? -1 : 1;
-            diff = abs(start - end);
-
-        } while (diff < 2 || diff >= LINES - 2);
-
-        attrset(A_NORMAL);
-
-        for (row = 0; row < diff; row++)
-        {
-            mvaddstr(LINES - row, row * direction + start,
-                (direction < 0) ? "\\" : "/");
-
-            if (flag++)
-            {
-                myrefresh();
-                erase();
-                flag = 0;
-            }
-        }
-
-        if (flag++)
-        {
-            myrefresh();
-            flag = 0;
-        }
-
-        explode(LINES - row, diff * direction + start);
-        erase();
-        myrefresh();
-    }
+    // for emscripten
+    ml_step = 0;
+    ml_func = 0;
+    ml_do_erase = 0;
+    emscripten_set_main_loop(main_loop, 1000 / DELAYSIZE);
 
     endwin();
 
     return 0;
 }
 
-void explode(int row, int col)
+void explode()
 {
-    erase();
-    mvaddstr(row, col, "-");
     myrefresh();
-
-    --col;
-
-    get_color();
-    mvaddstr(row - 1, col, " - ");
-    mvaddstr(row,     col, "-+-");
-    mvaddstr(row + 1, col, " - ");
-    myrefresh();
-
-    --col;
-
-    get_color();
-    mvaddstr(row - 2, col, " --- ");
-    mvaddstr(row - 1, col, "-+++-");
-    mvaddstr(row,     col, "-+#+-");
-    mvaddstr(row + 1, col, "-+++-");
-    mvaddstr(row + 2, col, " --- ");
-    myrefresh();
-
-    get_color();
-    mvaddstr(row - 2, col, " +++ ");
-    mvaddstr(row - 1, col, "++#++");
-    mvaddstr(row,     col, "+# #+");
-    mvaddstr(row + 1, col, "++#++");
-    mvaddstr(row + 2, col, " +++ ");
-    myrefresh();
-
-    get_color();
-    mvaddstr(row - 2, col, "  #  ");
-    mvaddstr(row - 1, col, "## ##");
-    mvaddstr(row,     col, "#   #");
-    mvaddstr(row + 1, col, "## ##");
-    mvaddstr(row + 2, col, "  #  ");
-    myrefresh();
-
-    get_color();
-    mvaddstr(row - 2, col, " # # ");
-    mvaddstr(row - 1, col, "#   #");
-    mvaddstr(row,     col, "     ");
-    mvaddstr(row + 1, col, "#   #");
-    mvaddstr(row + 2, col, " # # ");
-    myrefresh();
+    if(ml_step == 0)
+    {
+        erase();
+        mvaddstr(ml_explode_row, ml_explode_col, "-");
+        ++ ml_step;
+        return;
+    } else if (ml_step == 1) {
+        --ml_explode_col;
+        get_color();
+        mvaddstr(ml_explode_row - 1, ml_explode_col, " - ");
+        mvaddstr(ml_explode_row,     ml_explode_col, "-+-");
+        mvaddstr(ml_explode_row + 1, ml_explode_col, " - ");
+        ++ ml_step;
+        return;
+    } else if (ml_step == 2) {
+        --ml_explode_col;
+        get_color();
+        mvaddstr(ml_explode_row - 2, ml_explode_col, " --- ");
+        mvaddstr(ml_explode_row - 1, ml_explode_col, "-+++-");
+        mvaddstr(ml_explode_row,     ml_explode_col, "-+#+-");
+        mvaddstr(ml_explode_row + 1, ml_explode_col, "-+++-");
+        mvaddstr(ml_explode_row + 2, ml_explode_col, " --- ");
+        ++ ml_step;
+        return;
+    } else if (ml_step == 3) {
+        get_color();
+        mvaddstr(ml_explode_row - 2, ml_explode_col, " +++ ");
+        mvaddstr(ml_explode_row - 1, ml_explode_col, "++#++");
+        mvaddstr(ml_explode_row,     ml_explode_col, "+# #+");
+        mvaddstr(ml_explode_row + 1, ml_explode_col, "++#++");
+        mvaddstr(ml_explode_row + 2, ml_explode_col, " +++ ");
+        ++ ml_step;
+        return;
+    } else if (ml_step == 4) {
+        get_color();
+        mvaddstr(ml_explode_row - 2, ml_explode_col, "  #  ");
+        mvaddstr(ml_explode_row - 1, ml_explode_col, "## ##");
+        mvaddstr(ml_explode_row,     ml_explode_col, "#   #");
+        mvaddstr(ml_explode_row + 1, ml_explode_col, "## ##");
+        mvaddstr(ml_explode_row + 2, ml_explode_col, "  #  ");
+        ++ ml_step;
+        return;
+    } else if (ml_step == 5) {
+        get_color();
+        mvaddstr(ml_explode_row - 2, ml_explode_col, " # # ");
+        mvaddstr(ml_explode_row - 1, ml_explode_col, "#   #");
+        mvaddstr(ml_explode_row,     ml_explode_col, "     ");
+        mvaddstr(ml_explode_row + 1, ml_explode_col, "#   #");
+        mvaddstr(ml_explode_row + 2, ml_explode_col, " # # ");
+        ++ml_step;
+        return;
+    } else if (ml_step == 6) {
+        erase();
+        ml_func = 0;
+        ml_step = 0;
+        return;
+    }
 }
 
 void myrefresh(void)
 {
-    napms(DELAYSIZE);
+    //napms(DELAYSIZE);
     move(LINES - 1, COLS - 1);
     refresh();
 }

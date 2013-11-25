@@ -24,6 +24,9 @@ else
 	CFLAGS  = -O2 -Wall
 endif
 
+#wl
+CFLAGS += -fPIC
+
 BUILD		= $(CC) $(CFLAGS) -I$(PDCURSES_SRCDIR)
 
 ifeq ($(shell uname),Darwin)
@@ -48,7 +51,9 @@ clean:
 	-rm -rf *.o trace $(LIBCURSES) $(DEMOS)
 
 demos:	$(DEMOS)
-	strip $(DEMOS)
+
+#wl
+	#strip $(DEMOS)
 
 $(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
 	ar rv $@ $?
