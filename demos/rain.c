@@ -55,10 +55,74 @@ static int next_j(int j)
     return j;
 }
 
+int x, y, j, r, c, seed;
+static int xpos[5], ypos[5];
+void worker2(void *arg);
+void worker(void *arg)
+{
+    x = rand() % c + 2;
+    y = rand() % r + 2;
+
+    mvaddch(y, x, '.');
+
+    mvaddch(ypos[j], xpos[j], 'o');
+
+    j = next_j(j);
+    mvaddch(ypos[j], xpos[j], 'O');
+
+    j = next_j(j);
+    mvaddch(ypos[j] - 1, xpos[j], '-');
+    mvaddstr(ypos[j], xpos[j] - 1, "|.|");
+    mvaddch(ypos[j] + 1, xpos[j], '-');
+
+    j = next_j(j);
+    mvaddch(ypos[j] - 2, xpos[j], '-');
+    mvaddstr(ypos[j] - 1, xpos[j] - 1, "/ \\");
+    mvaddstr(ypos[j], xpos[j] - 2, "| O |");
+    mvaddstr(ypos[j] + 1, xpos[j] - 1, "\\ /");
+    mvaddch(ypos[j] + 2, xpos[j], '-');
+
+    j = next_j(j);
+    mvaddch(ypos[j] - 2, xpos[j], ' ');
+    mvaddstr(ypos[j] - 1, xpos[j] - 1, "   ");
+    mvaddstr(ypos[j], xpos[j] - 2, "     ");
+    mvaddstr(ypos[j] + 1, xpos[j] - 1, "   ");
+    mvaddch(ypos[j] + 2, xpos[j], ' ');
+
+    xpos[j] = x;
+    ypos[j] = y;
+
+    getch_async(worker2);
+}
+void worker2(void *arg)
+{
+    switch ((int)arg)
+    {
+    case 'q':
+    case 'Q':
+        curs_set(1);
+        endwin();
+        return;
+    case 's':
+        nodelay(stdscr, FALSE);
+        break;
+    case ' ':
+        nodelay(stdscr, TRUE);
+#ifdef KEY_RESIZE
+        break;
+    case KEY_RESIZE:
+# ifdef PDCURSES
+        resize_term(0, 0);
+        erase();
+# endif
+        r = LINES - 4;
+        c = COLS - 4;
+#endif
+    }
+    napms_async(50, worker);
+}
 int main(int argc, char *argv[])
 {
-    int x, y, j, r, c, seed;
-    static int xpos[5], ypos[5];
 
 #ifdef XCURSES
     Xinitscr(argc, argv);
@@ -97,63 +161,6 @@ int main(int argc, char *argv[])
         ypos[j] = rand() % r + 2;
     }
 
-    for (j = 0;;)
-    {
-        x = rand() % c + 2;
-        y = rand() % r + 2;
-
-        mvaddch(y, x, '.');
-
-        mvaddch(ypos[j], xpos[j], 'o');
-
-        j = next_j(j);
-        mvaddch(ypos[j], xpos[j], 'O');
-
-        j = next_j(j);
-        mvaddch(ypos[j] - 1, xpos[j], '-');
-        mvaddstr(ypos[j], xpos[j] - 1, "|.|");
-        mvaddch(ypos[j] + 1, xpos[j], '-');
-
-        j = next_j(j);
-        mvaddch(ypos[j] - 2, xpos[j], '-');
-        mvaddstr(ypos[j] - 1, xpos[j] - 1, "/ \\");
-        mvaddstr(ypos[j], xpos[j] - 2, "| O |");
-        mvaddstr(ypos[j] + 1, xpos[j] - 1, "\\ /");
-        mvaddch(ypos[j] + 2, xpos[j], '-');
-
-        j = next_j(j);
-        mvaddch(ypos[j] - 2, xpos[j], ' ');
-        mvaddstr(ypos[j] - 1, xpos[j] - 1, "   ");
-        mvaddstr(ypos[j], xpos[j] - 2, "     ");
-        mvaddstr(ypos[j] + 1, xpos[j] - 1, "   ");
-        mvaddch(ypos[j] + 2, xpos[j], ' ');
-
-        xpos[j] = x;
-        ypos[j] = y;
-
-        switch (getch())
-        {
-        case 'q':
-        case 'Q':
-            curs_set(1);
-            endwin();
-            return EXIT_SUCCESS;
-        case 's':
-            nodelay(stdscr, FALSE);
-            break;
-        case ' ':
-            nodelay(stdscr, TRUE);
-#ifdef KEY_RESIZE
-            break;
-        case KEY_RESIZE:
-# ifdef PDCURSES
-            resize_term(0, 0);
-            erase();
-# endif
-            r = LINES - 4;
-            c = COLS - 4;
-#endif
-        }
-        napms(50);
-    }
+    j = 0;
+    worker(NULL);
 }

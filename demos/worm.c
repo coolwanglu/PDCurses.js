@@ -151,13 +151,14 @@ static void cleanup(void)
     endwin();
 }
 
+const struct options *op;
+struct worm *w;
+short **ref, *ip;
+int x, y, n, h, last, bottom, seed;
+void worker2(void * arg);
+void worker3(void * arg);
 int main(int argc, char *argv[])
 {
-    const struct options *op;
-    struct worm *w;
-    short **ref, *ip;
-    int x, y, n, h, last, bottom, seed;
-
     for (x = 1; x < argc; x++)
     {
         char *p = argv[x];
@@ -167,39 +168,39 @@ int main(int argc, char *argv[])
 
         switch (*p)
         {
-        case 'f':
-            field = "WORM";
-            break;
-        case 'l':
-            if (++x == argc)
-                goto usage;
+            case 'f':
+                field = "WORM";
+                break;
+            case 'l':
+                if (++x == argc)
+                    goto usage;
 
-            if ((length = atoi(argv[x])) < 2 || length > 1024)
-            {
-                fprintf(stderr, "%s: Invalid length\n", *argv);
+                if ((length = atoi(argv[x])) < 2 || length > 1024)
+                {
+                    fprintf(stderr, "%s: Invalid length\n", *argv);
+                    return EXIT_FAILURE;
+                }
+
+                break;
+            case 'n':
+                if (++x == argc)
+                    goto usage;
+
+                if ((number = atoi(argv[x])) < 1 || number > 40)
+                {
+                    fprintf(stderr, "%s: Invalid number of worms\n", *argv);
+                    return EXIT_FAILURE;
+                }
+
+                break;
+            case 't':
+                trail = '.';
+                break;
+            default:
+usage:
+                fprintf(stderr, "usage: %s [-field] [-length #] "
+                        "[-number #] [-trail]\n", *argv);
                 return EXIT_FAILURE;
-            }
-
-            break;
-        case 'n':
-            if (++x == argc)
-                goto usage;
-
-            if ((number = atoi(argv[x])) < 1 || number > 40)
-            {
-                fprintf(stderr, "%s: Invalid number of worms\n", *argv);
-                return EXIT_FAILURE;
-            }
-
-            break;
-        case 't':
-            trail = '.';
-            break;
-        default:
-              usage:
-            fprintf(stderr, "usage: %s [-field] [-length #] "
-                            "[-number #] [-trail]\n", *argv);
-            return EXIT_FAILURE;
         }
     }
 
@@ -303,132 +304,134 @@ int main(int argc, char *argv[])
             }
     }
 
-    napms(12);
-    refresh();
     nodelay(stdscr, TRUE);
+    napms_async(12, worker2);
+}
+void worker2(void * arg)
+{
+    refresh();
+    getch_async(worker3);
+}
+void worker3(void * arg)
+{
+    int ch = (int)arg;
 
-    for (;;)
+    if (ch > 0)
     {
-        int ch;
-
-        if ((ch = getch()) > 0)
-        {
 #ifdef KEY_RESIZE
-            if (ch == KEY_RESIZE)
-            {
+        if (ch == KEY_RESIZE)
+        {
 # ifdef PDCURSES
-                resize_term(0, 0);
-                erase();
+            resize_term(0, 0);
+            erase();
 # endif
-                if (last != COLS - 1)
+            if (last != COLS - 1)
+            {
+                for (y = 0; y <= bottom; y++)
                 {
-                    for (y = 0; y <= bottom; y++)
-                    {
-                        ref[y] = realloc(ref[y], sizeof(short) * COLS);
+                    ref[y] = realloc(ref[y], sizeof(short) * COLS);
 
-                        for (x = last + 1; x < COLS; x++)
-                            ref[y][x] = 0;
-                    }
-
-                    last = COLS - 1;
+                    for (x = last + 1; x < COLS; x++)
+                        ref[y][x] = 0;
                 }
 
-                if (bottom != LINES - 1)
-                {
-                    for (y = LINES; y <= bottom; y++)
-                        free(ref[y]);
-
-                    ref = realloc(ref, sizeof(short *) * LINES);
-
-                    for (y = bottom + 1; y < LINES; y++)
-                    {
-                        ref[y] = malloc(sizeof(short) * COLS);
-
-                        for (x = 0; x < COLS; x++)
-                            ref[y][x] = 0;
-                    }
-
-                    bottom = LINES - 1;
-                }
+                last = COLS - 1;
             }
+
+            if (bottom != LINES - 1)
+            {
+                for (y = LINES; y <= bottom; y++)
+                    free(ref[y]);
+
+                ref = realloc(ref, sizeof(short *) * LINES);
+
+                for (y = bottom + 1; y < LINES; y++)
+                {
+                    ref[y] = malloc(sizeof(short) * COLS);
+
+                    for (x = 0; x < COLS; x++)
+                        ref[y][x] = 0;
+                }
+
+                bottom = LINES - 1;
+            }
+        }
 
 #endif /* KEY_RESIZE */
 
-            /* Make it simple to put this into single-step mode,
-               or resume normal operation - T. Dickey */
+        /* Make it simple to put this into single-step mode,
+           or resume normal operation - T. Dickey */
 
-            if (ch == 'q')
-            {
-                cleanup();
-                return EXIT_SUCCESS;
-            }
-            else if (ch == 's')
-                nodelay(stdscr, FALSE);
-            else if (ch == ' ')
-                nodelay(stdscr, TRUE);
-        }
-
-        for (n = 0, w = &worm[0]; n < number; n++, w++)
+        if (ch == 'q')
         {
-            if ((x = w->xpos[h = w->head]) < 0)
-            {
-                move(y = w->ypos[h] = bottom, x = w->xpos[h] = 0);
-                addch(flavor[n % FLAVORS]);
-                ref[y][x]++;
-            }
-            else
-                y = w->ypos[h];
-
-            if (x > last)
-                x = last;
-
-            if (y > bottom)
-                y = bottom;
-
-            if (++h == length)
-                h = 0;
-
-            if (w->xpos[w->head = h] >= 0)
-            {
-                int x1 = w->xpos[h];
-                int y1 = w->ypos[h];
-
-                if (y1 < LINES && x1 < COLS && --ref[y1][x1] == 0)
-                {
-                    move(y1, x1);
-                    addch(trail);
-                }
-            }
-
-            op = &(x == 0 ? (y == 0 ? upleft :
-                  (y == bottom ? lowleft : left)) :
-                  (x == last ? (y == 0 ? upright :
-                  (y == bottom ? lowright : right)) :
-                  (y == 0 ? upper :
-                  (y == bottom ? lower : normal))))
-                  [w->orientation];
-
-            switch (op->nopts)
-            {
-            case 0:
-                cleanup();
-                return EXIT_SUCCESS;
-            case 1:
-                w->orientation = op->opts[0];
-                break;
-            default:
-                w->orientation = op->opts[rand() % op->nopts];
-            }
-
-            move(y += yinc[w->orientation], x += xinc[w->orientation]);
-
-            if (y < 0)
-                y = 0;
-
-            addch(flavor[n % FLAVORS]);
-            ref[w->ypos[h] = y][w->xpos[h] = x]++;
+            cleanup();
+            return;
         }
-        napms(12);
-        refresh();
+        else if (ch == 's')
+            nodelay(stdscr, FALSE);
+        else if (ch == ' ')
+            nodelay(stdscr, TRUE);
     }
+
+    for (n = 0, w = &worm[0]; n < number; n++, w++)
+    {
+        if ((x = w->xpos[h = w->head]) < 0)
+        {
+            move(y = w->ypos[h] = bottom, x = w->xpos[h] = 0);
+            addch(flavor[n % FLAVORS]);
+            ref[y][x]++;
+        }
+        else
+            y = w->ypos[h];
+
+        if (x > last)
+            x = last;
+
+        if (y > bottom)
+            y = bottom;
+
+        if (++h == length)
+            h = 0;
+
+        if (w->xpos[w->head = h] >= 0)
+        {
+            int x1 = w->xpos[h];
+            int y1 = w->ypos[h];
+
+            if (y1 < LINES && x1 < COLS && --ref[y1][x1] == 0)
+            {
+                move(y1, x1);
+                addch(trail);
+            }
+        }
+
+        op = &(x == 0 ? (y == 0 ? upleft :
+              (y == bottom ? lowleft : left)) :
+              (x == last ? (y == 0 ? upright :
+              (y == bottom ? lowright : right)) :
+              (y == 0 ? upper :
+              (y == bottom ? lower : normal))))
+              [w->orientation];
+
+        switch (op->nopts)
+        {
+        case 0:
+            cleanup();
+            return;
+        case 1:
+            w->orientation = op->opts[0];
+            break;
+        default:
+            w->orientation = op->opts[rand() % op->nopts];
+        }
+
+        move(y += yinc[w->orientation], x += xinc[w->orientation]);
+
+        if (y < 0)
+            y = 0;
+
+        addch(flavor[n % FLAVORS]);
+        ref[w->ypos[h] = y][w->xpos[h] = x]++;
+    }
+    napms_async(12, worker2);
 }
