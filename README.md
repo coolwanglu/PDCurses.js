@@ -1,6 +1,9 @@
-PDCursed compiled with emscripten
-
+## PDCursed compiled with emscripten
 (uglily) hacked by Lu Wang <coolwanglu@gmail.com>
+
+### Demos
+[Firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
+
 
 This repo is supposed to demonstrate the power of emscripten as well as PDCurses,
 and to inspire people who would like to hack those.
