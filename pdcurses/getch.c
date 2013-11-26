@@ -154,9 +154,11 @@ static int _mouse_key(WINDOW *win)
     return key;
 }
 
+// for emscripten
+/*
 int wgetch(WINDOW *win)
 {
-    static int buffer[_INBUFSIZ];   /* character buffer */
+    static int buffer[_INBUFSIZ];   / * character buffer * /
     int key, waitcount;
 
     PDC_LOG(("wgetch() - called\n"));
@@ -166,53 +168,53 @@ int wgetch(WINDOW *win)
 
     waitcount = 0;
 
-     /* set the number of 1/20th second napms() calls */
+     / * set the number of 1/20th second napms() calls * /
 
     if (SP->delaytenths)
         waitcount = 2 * SP->delaytenths;
     else
         if (win->_delayms)
         {
-            /* Can't really do millisecond intervals, so delay in 
-               1/20ths of a second (50ms) */
+            / * Can't really do millisecond intervals, so delay in 
+               1/20ths of a second (50ms) * /
 
             waitcount = win->_delayms / 50;
             if (!waitcount)
                 waitcount = 1;
         }
 
-    /* refresh window when wgetch is called if there have been changes 
-       to it and it is not a pad */
+    / * refresh window when wgetch is called if there have been changes 
+       to it and it is not a pad * /
 
     if (!(win->_flags & _PAD) && ((!win->_leaveit &&
          (win->_begx + win->_curx != SP->curscol ||
           win->_begy + win->_cury != SP->cursrow)) || is_wintouched(win)))
         wrefresh(win);
 
-    /* if ungotten char exists, remove and return it */
+    / * if ungotten char exists, remove and return it * /
 
     if (c_ungind)
         return c_ungch[--c_ungind];
 
-    /* if normal and data in buffer */
+    / * if normal and data in buffer * /
 
     if ((!SP->raw_inp && !SP->cbreak) && (c_gindex < c_pindex))
         return buffer[c_gindex++];
 
-    /* prepare to buffer data */
+    / * prepare to buffer data * /
 
     c_pindex = 0;
     c_gindex = 0;
 
-    /* to get here, no keys are buffered. go and get one. */
+    / * to get here, no keys are buffered. go and get one. * /
 
-    for (;;)            /* loop for any buffering */
+    for (;;)            / * loop for any buffering * /
     {
-        /* is there a keystroke ready? */
+        / * is there a keystroke ready? * /
 
         if (!PDC_check_key())
         {
-            /* if not, handle timeout() and halfdelay() */
+            / * if not, handle timeout() and halfdelay() * /
 
             if (SP->delaytenths || win->_delayms)
             {
@@ -225,26 +227,121 @@ int wgetch(WINDOW *win)
                 if (win->_nodelay)
                     return ERR;
 
-            napms(50);  /* sleep for 1/20th second */
-            continue;   /* then check again */
+            napms(50);  / * sleep for 1/20th second * /
+            continue;   / * then check again * /
         }
 
-        /* if there is, fetch it */
+        / * if there is, fetch it * /
 
         key = PDC_get_key();
 
         if (SP->key_code)
         {
-            /* filter special keys if not in keypad mode */
+            / * filter special keys if not in keypad mode * /
 
             if (!win->_use_keypad)
+                key = -1;
+
+            / * filter mouse events; translate mouse clicks in the slk 
+               area to function keys * /
+
+            else if (key == KEY_MOUSE)
+                key = _mouse_key(win);
+        }
+
+        / * unwanted key? loop back * /
+
+        if (key == -1)
+            continue;
+
+        / * translate CR * /
+
+        if (key == '\r' && SP->autocr && !SP->raw_inp)
+            key = '\n';
+
+        / * if echo is enabled * /
+
+        if (SP->echo && !SP->key_code)
+        {
+            waddch(win, key);
+            wrefresh(win);
+        }
+
+        / * if no buffering * /
+
+        if (SP->raw_inp || SP->cbreak)
+            return key;
+
+        / * if no overflow, put data in buffer * /
+
+        if (key == '\b')
+        {
+            if (c_pindex > c_gindex)
+                c_pindex--;
+        }
+        else
+            if (c_pindex < _INBUFSIZ - 2)
+                buffer[c_pindex++] = key;
+
+        / * if we got a line * /
+
+        if (key == '\n' || key == '\r')
+            return buffer[c_gindex++];
+    }
+}
+*/
+
+int wgetch(WINDOW *win) {
+    return ERR;
+}
+
+static WINDOW * wgetch_async__win;
+static void (*wgetch_async__callback)(void*);
+static int wgetch_async__buffer[_INBUFSIZ];   /* character buffer */
+static int wgetch_async__waitcount;
+static void wgetch_async_(void *arg)
+{
+    for(;;) {
+        /* is there a keystroke ready? */
+        if (!PDC_check_key())
+        {
+            /* if not, handle timeout() and halfdelay() */
+
+            if (SP->delaytenths || wgetch_async__win->_delayms)
+            {
+                if (!wgetch_async__waitcount) {
+                    (*wgetch_async__callback)((void*)ERR);
+                    return;
+                }
+
+                wgetch_async__waitcount--;
+            }
+            else
+                if (wgetch_async__win->_nodelay) {
+                    (*wgetch_async__callback)((void*)ERR);
+                    return;
+                }
+
+            napms_async(50, wgetch_async_);  /* sleep for 1/20th second */
+            return;   /* then check again */
+        }
+
+        /* if there is, fetch it */
+
+        int key = PDC_get_key();
+
+        if (SP->key_code)
+        {
+            /* filter special keys if not in keypad mode */
+
+            if (!wgetch_async__win->_use_keypad)
                 key = -1;
 
             /* filter mouse events; translate mouse clicks in the slk 
                area to function keys */
 
             else if (key == KEY_MOUSE)
-                key = _mouse_key(win);
+                key = _mouse_key(wgetch_async__win);
         }
 
         /* unwanted key? loop back */
@@ -261,14 +358,16 @@ int wgetch(WINDOW *win)
 
         if (SP->echo && !SP->key_code)
         {
-            waddch(win, key);
-            wrefresh(win);
+            waddch(wgetch_async__win, key);
+            wrefresh(wgetch_async__win);
         }
 
         /* if no buffering */
 
-        if (SP->raw_inp || SP->cbreak)
-            return key;
+        if (SP->raw_inp || SP->cbreak) {
+            (*wgetch_async__callback)((void*)key);
+            return;
+        }
 
         /* if no overflow, put data in buffer */
 
@@ -279,15 +378,81 @@ int wgetch(WINDOW *win)
         }
         else
             if (c_pindex < _INBUFSIZ - 2)
-                buffer[c_pindex++] = key;
+                wgetch_async__buffer[c_pindex++] = key;
 
         /* if we got a line */
 
-        if (key == '\n' || key == '\r')
-            return buffer[c_gindex++];
+        if (key == '\n' || key == '\r') {
+            int ret = wgetch_async__buffer[c_gindex++];
+            (*wgetch_async__callback)((void*)ret);
+            return;
+        }
     }
 }
 
+int wgetch_async(WINDOW *win, void (*callback)(void*))
+{
+    PDC_LOG(("wgetch() - called\n"));
+
+    if (!win) {
+        (*callback)((void*)ERR);
+        return ERR;
+    }
+
+    wgetch_async__waitcount = 0;
+
+     /* set the number of 1/20th second napms() calls */
+
+    if (SP->delaytenths)
+        wgetch_async__waitcount = 2 * SP->delaytenths;
+    else
+        if (win->_delayms)
+        {
+            /* Can't really do millisecond intervals, so delay in 
+               1/20ths of a second (50ms) */
+
+            wgetch_async__waitcount = win->_delayms / 50;
+            if (!wgetch_async__waitcount)
+                wgetch_async__waitcount = 1;
+        }
+
+    /* refresh window when wgetch is called if there have been changes 
+       to it and it is not a pad */
+
+    if (!(win->_flags & _PAD) && ((!win->_leaveit &&
+         (win->_begx + win->_curx != SP->curscol ||
+          win->_begy + win->_cury != SP->cursrow)) || is_wintouched(win)))
+        wrefresh(win);
+
+    /* if ungotten char exists, remove and return it */
+
+    if (c_ungind) {
+        int ret = c_ungch[--c_ungind];
+        (*callback)((void*)ret);
+        return ret;
+    }
+
+    /* if normal and data in buffer */
+
+    if ((!SP->raw_inp && !SP->cbreak) && (c_gindex < c_pindex)) {
+        int ret = wgetch_async__buffer[c_gindex++];
+        (*callback)((void*)ret);
+        return ret;
+    }
+
+    /* prepare to buffer data */
+
+    c_pindex = 0;
+    c_gindex = 0;
+
+    /* to get here, no keys are buffered. go and get one. */
+
+    wgetch_async__win = win;
+    wgetch_async__callback = callback;
+    wgetch_async_(NULL);
+}
+
+// for emscripten
 int mvgetch(int y, int x)
 {
     PDC_LOG(("mvgetch() - called\n"));
@@ -297,7 +462,19 @@ int mvgetch(int y, int x)
 
     return wgetch(stdscr);
 }
+int mvgetch_async(int y, int x, void (*callback)(void*))
+{
+    PDC_LOG(("mvgetch() - called\n"));
 
+    if (move(y, x) == ERR) {
+        (*callback)((void*)ERR);
+        return ERR;
+    }
+
+    return wgetch_async(stdscr, callback);
+}
+
+// for emscripten
 int mvwgetch(WINDOW *win, int y, int x)
 {
     PDC_LOG(("mvwgetch() - called\n"));
@@ -306,6 +483,17 @@ int mvwgetch(WINDOW *win, int y, int x)
         return ERR;
 
     return wgetch(win);
+}
+int mvwgetch_async(WINDOW *win, int y, int x, void (*callback)(void*))
+{
+    PDC_LOG(("mvwgetch_async() - called\n"));
+
+    if (wmove(win, y, x) == ERR) {
+        (*callback)((void*)ERR);
+        return ERR;
+    }
+
+    return wgetch_async(win, callback);
 }
 
 int PDC_ungetch(int ch)
@@ -357,6 +545,7 @@ int PDC_return_key_modifiers(bool flag)
 }
 
 #ifdef PDC_WIDE
+// for emscripten
 int wget_wch(WINDOW *win, wint_t *wch)
 {
     int key;
@@ -375,14 +564,49 @@ int wget_wch(WINDOW *win, wint_t *wch)
 
     return SP->key_code ? KEY_CODE_YES : OK;
 }
+static void (*wget_wch_async__callback)(void*);
+static void wget_wch_async_(void * arg) 
+{
+    int key = (int)arg;
+    if (key == ERR)
+    {
+        (*wget_wch_async__callback)((void*)ERR);
+        return;
+    }
 
+    *wch = key;
+
+    (*wget_wch_async__callback)((void*)(SP->key_code ? KEY_CODE_YES : OK));
+}
+int wget_wch_async(WINDOW *win, wint_t *wch, void (*callback)(void*))
+{
+    int key;
+
+    PDC_LOG(("wget_wch_async() - called\n"));
+
+    if (!wch)
+        return ERR;
+
+    wget_wch_async__callback = callback;
+    key = wgetch_async(win, wget_wch_async_);
+    return OK;
+}
+
+// for emscripten
 int get_wch(wint_t *wch)
 {
     PDC_LOG(("get_wch() - called\n"));
 
     return wget_wch(stdscr, wch);
 }
+int get_wch_async(wint_t *wch, void (*callback)(void*))
+{
+    PDC_LOG(("get_wch_async() - called\n"));
 
+    return wget_wch_async(stdscr, wch, callback);
+}
+
+// for emscripten
 int mvget_wch(int y, int x, wint_t *wch)
 {
     PDC_LOG(("mvget_wch() - called\n"));
@@ -392,7 +616,20 @@ int mvget_wch(int y, int x, wint_t *wch)
 
     return wget_wch(stdscr, wch);
 }
+int mvget_wch_async(int y, int x, wint_t *wch, void (*callback)(void*))
+{
+    PDC_LOG(("mvget_wch_async() - called\n"));
 
+    if (move(y, x) == ERR)
+    {
+        (*callback)((void*)ERR);
+        return;
+    }
+
+    return wget_wch_async(stdscr, wch, callback);
+}
+
+// for emscripten
 int mvwget_wch(WINDOW *win, int y, int x, wint_t *wch)
 {
     PDC_LOG(("mvwget_wch() - called\n"));
@@ -401,6 +638,18 @@ int mvwget_wch(WINDOW *win, int y, int x, wint_t *wch)
         return ERR;
 
     return wget_wch(win, wch);
+}
+int mvwget_wch_async(WINDOW *win, int y, int x, wint_t *wch, void (*callback)(void*))
+{
+    PDC_LOG(("mvwget_wch_async() - called\n"));
+
+    if (wmove(win, y, x) == ERR)
+    {
+        (*callback)((void*)ERR);
+        return;
+    }
+
+    return wget_wch_async(win, wch, callback);
 }
 
 int unget_wch(const wchar_t wch)

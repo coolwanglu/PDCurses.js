@@ -119,12 +119,16 @@ void use_env(bool x)
     PDC_LOG(("use_env() - called: x %d\n", x));
 }
 
+// for emscripten
+/*
 int delay_output(int ms)
 {
     PDC_LOG(("delay_output() - called: ms %d\n", ms));
 
     return napms(ms);
 }
+*/
+
 
 #ifdef PDC_WIDE
 int getcchar(const cchar_t *wcval, wchar_t *wch, attr_t *attrs,
