@@ -920,6 +920,7 @@ int     flash_async(void (*)(void*));
 int     flushinp(void);
 chtype  getbkgd(WINDOW *);
 int     getnstr(char *, int);
+int     getnstr_async(char *, int, void (*)(void*));
 int     getstr(char *);
 WINDOW *getwin(FILE *);
 int     halfdelay(int);

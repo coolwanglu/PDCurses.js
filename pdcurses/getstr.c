@@ -66,6 +66,7 @@ RCSID("$Id: getstr.c,v 1.51 2008/07/14 04:24:51 wmcbrine Exp $")
 
 #define MAXLINE 255
 
+// for emscripten
 int wgetnstr(WINDOW *win, char *str, int n)
 {
 #ifdef PDC_WIDE
@@ -211,6 +212,193 @@ int wgetnstr(WINDOW *win, char *str, int n)
     return OK;
 #endif
 }
+static void (*wgetnstr_async__callback)(void*);
+static char * wgetnstr_async__str;
+static wchar_t wgetnstr_async__wstr[MAXLINE + 1];
+static int wgetnstr_async__n;
+static void wgetnstr_async_(void * arg)
+{
+    int ret = (int)arg;
+    if (ret == ERR)
+    {
+        (*wgetnstr_async__callback)((void*)ERR);
+        return;
+    }
+    (*wgetnstr_async__callback)((void*)PDC_wcstombs(wgetnstr_async__str, wgetnstr_async__wstr, wgetnstr_async__n));
+}
+static char * wgetnstr_async__p;
+static bool wgetnstr_async__stop;
+static bool wgetnstr_async__oldecho;
+static bool wgetnstr_async__oldcbreak;
+static bool wgetnstr_async__oldnodelay;
+static int wgetnstr_async__chars;
+static int wgetnstr_async__x;
+static WINDOW * wgetnstr_async__win;
+static void wgetnstr_async_1(void *arg)
+{
+    char *p = wgetnstr_async__p;
+    char *str = wgetnstr_async__str;
+    int chars = wgetnstr_async__chars;
+    int n = wgetnstr_async__n;
+    WINDOW * win = wgetnstr_async__win;
+    bool oldecho = wgetnstr_async__oldecho;
+    bool oldcbreak = wgetnstr_async__oldcbreak;
+    bool oldnodelay = wgetnstr_async__oldnodelay;
+
+    int ch = (int)arg;
+    int i,num;
+    switch (ch)
+    {
+
+    case '\t':
+        ch = ' ';
+        num = TABSIZE - (win->_curx - wgetnstr_async__x) % TABSIZE;
+        for (i = 0; i < num; i++)
+        {
+            if (chars < n)
+            {
+                if (oldecho) 
+                    waddch(win, ch);
+                *p++ = ch;
+                ++chars;
+            }
+            else
+                beep();
+        }
+        break;
+
+    case _ECHAR:        /* CTRL-H -- Delete character */
+        if (p > str)
+        {
+            if (oldecho) 
+                waddstr(win, "\b \b");
+            ch = (unsigned char)(*--p);
+            if ((ch < ' ') && (oldecho))
+                waddstr(win, "\b \b");
+            chars--;
+        }
+        break;
+
+    case _DLCHAR:       /* CTRL-U -- Delete line */
+        while (p > str)
+        {
+            if (oldecho) 
+                waddstr(win, "\b \b");
+            ch = (unsigned char)(*--p);
+            if ((ch < ' ') && (oldecho))
+                waddstr(win, "\b \b");
+        }
+        chars = 0;
+        break;
+
+    case _DWCHAR:       /* CTRL-W -- Delete word */
+
+        while ((p > str) && (*(p - 1) == ' '))
+        {
+            if (oldecho) 
+                waddstr(win, "\b \b");
+
+            --p;        /* remove space */
+            chars--;
+        }
+        while ((p > str) && (*(p - 1) != ' '))
+        {
+            if (oldecho) 
+                waddstr(win, "\b \b");
+
+            ch = (unsigned char)(*--p);
+            if ((ch < ' ') && (oldecho))
+                waddstr(win, "\b \b");
+            chars--;
+        }
+        break;
+
+    case '\n':
+    case '\r':
+        wgetnstr_async__stop = TRUE;
+        if (oldecho) 
+            waddch(win, '\n');
+        break;
+
+    default:
+        if (chars < n)
+        {
+            if (!SP->key_code && ch < 0x100)
+            {
+                *p++ = ch;
+                if (oldecho) 
+                    waddch(win, ch);
+                chars++;
+            }
+        }
+        else
+            beep();
+
+        break;
+  
+    }
+    wrefresh(win);
+    if(!wgetnstr_async__stop)
+    {
+        wgetnstr_async__p = p;
+        wgetnstr_async__str = str;
+        wgetnstr_async__chars = chars;
+        wgetch_async(win, wgetnstr_async_1);
+    }
+    else
+    {
+        *p = '\0';
+
+        SP->echo = oldecho;     /* restore old settings */
+        SP->cbreak = oldcbreak;
+        win->_nodelay = oldnodelay;
+        (*wgetnstr_async__callback)((void*)OK);
+    }
+}
+int wgetnstr_async(WINDOW *win, char *str, int n, void (*callback)(void*))
+{
+#ifdef PDC_WIDE
+
+    if (n < 0 || n > MAXLINE)
+        n = MAXLINE;
+
+    wgetnstr_async__str = str;
+    wgetnstr_async__n = n;
+    wgetnstr_async__callback = callback;
+    wgetn_wstr_async(win, (wint_t *)wstr, n, wgetnstr_async_);
+    return;
+#else
+    PDC_LOG(("wgetnstr_async() - called\n"));
+
+    if (!win || !str)
+    {
+        (*callback)((void*)ERR);
+        return ERR;
+    }
+
+    wgetnstr_async__chars = 0;
+    wgetnstr_async__p = str;
+    wgetnstr_async__str = str;
+    wgetnstr_async__stop = FALSE;
+    wgetnstr_async__win = win;
+    wgetnstr_async__x = win->_curx;
+    wgetnstr_async__n = n;
+
+    wgetnstr_async__oldcbreak = SP->cbreak; /* remember states */
+    wgetnstr_async__oldecho = SP->echo;
+    wgetnstr_async__oldnodelay = win->_nodelay;
+
+    SP->echo = FALSE;       /* we do echo ourselves */
+    cbreak();               /* ensure each key is returned immediately */
+    win->_nodelay = FALSE;  /* don't return -1 */
+
+    wrefresh(win);
+
+    wgetnstr_async__callback = callback;
+    wgetch_async(win, wgetnstr_async_1);
+    return OK;
+#endif
+}
 
 int getstr(char *str)
 {
@@ -246,11 +434,18 @@ int mvwgetstr(WINDOW *win, int y, int x, char *str)
     return wgetnstr(win, str, MAXLINE);
 }
 
+// for emscripten
 int getnstr(char *str, int n)
 {
     PDC_LOG(("getnstr() - called\n"));
 
     return wgetnstr(stdscr, str, n);
+}
+int getnstr_async(char *str, int n, void (*callback)(void*))
+{
+    PDC_LOG(("getnstr_async() - called\n"));
+
+    return wgetnstr_async(stdscr, str, n, callback);
 }
 
 int mvgetnstr(int y, int x, char *str, int n)
