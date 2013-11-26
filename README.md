@@ -3,12 +3,12 @@
 
 ### Demos (most interesting first)
 
-[newdemo](http://coolwanglu.github.io/PDCurses-emscripten/web/newdemo.html)
-[worm](http://coolwanglu.github.io/PDCurses-emscripten/web/worm.html)
-[firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
-[rain](http://coolwanglu.github.io/PDCurses-emscripten/web/rain.html)
-[sdltest](http://coolwanglu.github.io/PDCurses-emscripten/web/sdltest.html)
-[ptest](http://coolwanglu.github.io/PDCurses-emscripten/web/ptest.html)
+- [newdemo](http://coolwanglu.github.io/PDCurses-emscripten/web/newdemo.html)
+- [worm](http://coolwanglu.github.io/PDCurses-emscripten/web/worm.html)
+- [firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
+- [rain](http://coolwanglu.github.io/PDCurses-emscripten/web/rain.html)
+- [sdltest](http://coolwanglu.github.io/PDCurses-emscripten/web/sdltest.html)
+- [ptest](http://coolwanglu.github.io/PDCurses-emscripten/web/ptest.html)
 
 
 This repo is supposed to demonstrate the power of emscripten as well as PDCurses,
