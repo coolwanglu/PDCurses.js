@@ -13,8 +13,7 @@ build_demo () {
     $EM_DIR/emcc -o web/$1.html web/$1.bc --preload-file pdcfont.bmp
 }
 
-#for demo in firework newdemo ptest rain testcurs tuidemo worm xmas sdltest; do
-for demo in newdemo; do
+for demo in firework newdemo ptest rain testcurs tuidemo worm xmas sdltest; do
     echo "Building $demo"
     build_demo $demo
 done

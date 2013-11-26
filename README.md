@@ -3,6 +3,7 @@
 
 ### Demos
 [firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
+[sdltest](http://coolwanglu.github.io/PDCurses-emscripten/web/sdltest.html)
 [newdemo](http://coolwanglu.github.io/PDCurses-emscripten/web/newdemo.html)
 
 
