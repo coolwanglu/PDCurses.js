@@ -2,7 +2,8 @@
 (uglily) hacked by Lu Wang <coolwanglu@gmail.com>
 
 ### Demos
-[Firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
+[firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
+[newdemo](http://coolwanglu.github.io/PDCurses-emscripten/web/newdemo.html)
 
 
 This repo is supposed to demonstrate the power of emscripten as well as PDCurses,
