@@ -1,5 +1,5 @@
 ## PDCursed compiled with emscripten
-(uglily) hacked by Lu Wang <coolwanglu@gmail.com>
+(uglily) hacked by Lu Wang coolwanglu<at>gmail.com
 
 ### Demos (most interesting first)
 
@@ -25,6 +25,7 @@ There is no further documentation or support right now.
 
 - Get your self familiar with emscripten, curses and SDL
 - Prepare the dependencies 
+- Set up path of emscripten in `build.sh`
 - Run `build.sh`
 - Trail, error, google
 
