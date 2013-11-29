@@ -1,5 +1,5 @@
 ## PDCursed compiled with emscripten
-(uglily) hacked by Lu Wang <coolwanglu@gmail.com>
+(uglily) hacked by Lu Wang 
 
 ### Demos (most interesting first)
 
