@@ -3,6 +3,7 @@
 
 ### Demos (most interesting first)
 
+- [xmas](http://coolwanglu.github.io/PDCurses-emscripten/web/xmas.html)
 - [newdemo](http://coolwanglu.github.io/PDCurses-emscripten/web/newdemo.html)
 - [worm](http://coolwanglu.github.io/PDCurses-emscripten/web/worm.html)
 - [firework](http://coolwanglu.github.io/PDCurses-emscripten/web/firework.html)
