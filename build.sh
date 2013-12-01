@@ -13,6 +13,20 @@ build_demo () {
     $EM_DIR/emcc -o web/$1.html web/$1.bc --preload-file pdcfont.bmp
 }
 
+# special build for xmas2
+# xmas2.html has been prepared
+build_xmas2() {
+    cp sdl1/xmas2 web/xmas2.bc
+    $EM_DIR/emcc -o web/xmas2.old.js web/xmas2.bc --preload-file pdcfont.bmp -s EXPORTED_FUNCTIONS="['_real_main']"
+    # replace $_async_context with for streamline
+    cat web/xmas2.old.js | sed 's/$_async_context/_/g' > web/xmas2._js
+    _node -c web/xmas2._js
+}
+
+build_xmas2
+exit 0
+
+
 for demo in firework newdemo ptest rain testcurs tuidemo worm xmas sdltest; do
     echo "Building $demo"
     build_demo $demo

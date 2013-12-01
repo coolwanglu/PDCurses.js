@@ -49,6 +49,14 @@
 #include <curses.h>
 #include <signal.h>
 
+#define ASYNC
+#include "async2.h"
+
+#define napms(x) js_napms(x ASYNC_ARG)
+
+// implemented in js
+int js_napms(int ms DECL_ASYNC_ARG);
+
 void lil(WINDOW *);
 void midtop(WINDOW *);
 void bigtop(WINDOW *);
@@ -71,8 +79,8 @@ void strng2(void);
 void strng3(void);
 void strng4(void);
 void strng5(void);
-void blinkit(void);
-void reindeer(void);
+void blinkit(DECL_ASYNC_ARG_ONLY);
+void reindeer(DECL_ASYNC_ARG_ONLY);
 
 #define FROMWHO "From Larry Bartz, Mark Hessling and William McBrine"
 
@@ -86,8 +94,21 @@ WINDOW *treescrn, *treescrn2, *treescrn3, *treescrn4, *treescrn5,
        *lookdeer2, *lookdeer3, *lookdeer4, *w_holiday, *w_del_msg;
 
 int main(int argc, char **argv)
+{ 
+    /*
+     * Create a fake callback and call real_main
+     * in JS we will call real_main directly with a real callback
+     */
+    DECL_ASYNC_ARG_KR
+    real_main(ASYNC_ARG_ONLY);
+    return 0;
+}
+
+int real_main(DECL_ASYNC_ARG_ONLY)
 {
     int loopy;
+    
+    printf("real_main\n");
 
 #ifdef XCURSES
     Xinitscr(argc, argv);
@@ -119,6 +140,8 @@ int main(int argc, char **argv)
     w_del_msg = newwin(1, 12, 23, 60);
 
     mvwaddstr(w_holiday, 0, 0, "H A P P Y  H O L I D A Y S");
+
+    printf("here\n");
 
     initdeer();
 
@@ -328,7 +351,7 @@ int main(int argc, char **argv)
     mvwaddch(treescrn7, 12, 14, ' ');
 
     napms(1000);
-    reindeer();
+    reindeer(ASYNC_ARG_ONLY);
 
     touchwin(w_holiday);
     wrefresh(w_holiday);
@@ -337,7 +360,7 @@ int main(int argc, char **argv)
     napms(1000);
 
     for (loopy = 0; loopy < 50; loopy++)
-        blinkit();
+        blinkit(ASYNC_ARG_ONLY);
 
     clear();
     refresh();
@@ -758,7 +781,7 @@ void strng5(void)
     wrefresh(w_del_msg);
 }
 
-void blinkit(void)
+void blinkit(DECL_ASYNC_ARG_ONLY)
 {
     static int cycle;
 
@@ -810,7 +833,7 @@ void blinkit(void)
 #define SHOW(win, pause) mvwin(win, y_pos, x_pos); wrefresh(win); \
              wrefresh(w_del_msg); napms(pause)
 
-void reindeer(void)
+void reindeer(DECL_ASYNC_ARG_ONLY)
 {
     int looper;
 
