@@ -23,11 +23,22 @@ build_xmas2() {
     _node -c web/xmas2._js
 }
 
+# special build for xmas_orig
+# xmas_orig.html has been prepared
+build_xmas_orig() {
+    cp sdl1/xmas_orig web/xmas_orig.bc
+    $EM_DIR/emcc -o web/xmas_orig.js web/xmas_orig.bc --preload-file pdcfont.bmp
+}
+
+build_demo xmas
+exit 0
+
+
 build_xmas2
 exit 0
 
 
-for demo in firework newdemo ptest rain testcurs tuidemo worm xmas sdltest; do
+for demo in firework newdemo ptest rain testcurs tuidemo worm xmas sdltest xmas_orig; do
     echo "Building $demo"
     build_demo $demo
 done
