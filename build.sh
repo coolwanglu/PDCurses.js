@@ -30,6 +30,9 @@ build_xmas_orig() {
     $EM_DIR/emcc -o web/xmas_orig.js web/xmas_orig.bc --preload-file pdcfont.bmp
 }
 
+build_xmas_orig
+exit 0
+
 build_demo xmas
 exit 0
 
