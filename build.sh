@@ -11,7 +11,7 @@ mkdir web || true
 build_demo () {
     pushd web
     cp ../sdl1/$1 $1.bc
-    $EM_DIR/emcc -Oz -o $1.html $1.bc --preload-file pdcfont.bmp
+    $EM_DIR/emcc -s ASYNCIFY=1 -Oz -o $1.html $1.bc --preload-file pdcfont.bmp
     popd
 }
 
