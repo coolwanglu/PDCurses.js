@@ -18,27 +18,18 @@ SLIBS		= $(shell sdl-config --libs)
 # If your system doesn't have these, remove the defines here
 SFLAGS		+= -DHAVE_VSNPRINTF -DHAVE_VSSCANF
 
-ifeq ($(DEBUG),Y)
-	CFLAGS  = -g -Wall -DPDCDEBUG
-else
-	CFLAGS  = -O2 -Wall
-endif
-
-#wl
-CFLAGS += -fPIC
-
 BUILD		= $(CC) $(CFLAGS) -I$(PDCURSES_SRCDIR)
 
-ifeq ($(shell uname),Darwin)
-	DEMOFLAGS = -Dmain=SDL_main
-endif
+#ifeq ($(shell uname),Darwin)
+#	DEMOFLAGS = -Dmain=SDL_main
+#endif
 
 LINK		= $(CC)
 LDFLAGS		= $(LIBCURSES) $(SLIBS)
 RANLIB		= ranlib
 LIBCURSES	= libpdcurses.a
 
-DEMOS		= firework newdemo ptest rain testcurs tuidemo worm xmas xmas2 xmas_orig\
+DEMOS		= firework newdemo ptest rain testcurs tuidemo worm xmas \
 sdltest
 
 .PHONY: all libs clean demos
@@ -51,9 +42,7 @@ clean:
 	-rm -rf *.o trace $(LIBCURSES) $(DEMOS)
 
 demos:	$(DEMOS)
-
-#wl
-	#strip $(DEMOS)
+	strip $(DEMOS)
 
 $(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
 	ar rv $@ $?
@@ -94,12 +83,6 @@ worm: $(demodir)/worm.c
 	$(BUILD) $(DEMOFLAGS) -o $@ $< $(LDFLAGS)
 
 xmas: $(demodir)/xmas.c
-	$(BUILD) $(DEMOFLAGS) -o $@ $< $(LDFLAGS)
-
-xmas2: $(demodir)/xmas2.c
-	$(BUILD) $(DEMOFLAGS) -o $@ $< $(LDFLAGS)
-
-xmas_orig: $(demodir)/xmas_orig.c
 	$(BUILD) $(DEMOFLAGS) -o $@ $< $(LDFLAGS)
 
 sdltest: $(osdir)/sdltest.c

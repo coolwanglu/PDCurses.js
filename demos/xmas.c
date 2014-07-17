@@ -48,27 +48,6 @@
 
 #include <curses.h>
 #include <signal.h>
-#include <assert.h>
-
-#include <emscripten/emscripten.h>
-#include "async.h"
-
-// adapt napms to the async_framework
-int napms__cb2(void *arg)
-{
-    async_context * ASYNC_CTX = (async_context*)arg;
-    ASYNC_RETURN(0);
-}
-void napms__cb(void *arg)
-{
-    napms__cb2(arg);
-}
-int napms_(int ms  DECL_ASYNC_ARG)
-{
-    emscripten_async_call(napms__cb, ASYNC_CTX, ms);
-    return 0;
-}
-
 
 void lil(WINDOW *);
 void midtop(WINDOW *);
@@ -92,8 +71,9 @@ void strng2(void);
 void strng3(void);
 void strng4(void);
 void strng5(void);
-int blinkit(DECL_ASYNC_ARG1);
-int reindeer(DECL_ASYNC_ARG1);
+void blinkit(void);
+void reindeer(void);
+
 #define FROMWHO "From Larry Bartz, Mark Hessling and William McBrine"
 
 int y_pos, x_pos;
@@ -105,46 +85,9 @@ WINDOW *treescrn, *treescrn2, *treescrn3, *treescrn4, *treescrn5,
        *bigdeer2, *bigdeer3, *bigdeer4, *lookdeer0, *lookdeer1,
        *lookdeer2, *lookdeer3, *lookdeer4, *w_holiday, *w_del_msg;
 
-#define SIMPLE_NAPMS(ms, fn) \
-    ASYNC_PUSH(fn); \
-    return napms_(ms ASYNC_ARG); \
-    } \
-    DEFINE_ASYNC_CALLBACK(fn) \
-    { \
-    ASYNC_POP; \
-
-#define ASYNC_SPLIT(fn) \
-    ASYNC_PUSH(fn); \
-    ASYNC_RETURN(0); \
-    } \
-    DEFINE_ASYNC_CALLBACK(fn) \
-    { \
-    ASYNC_POP; \
-
-DEFINE_ASYNC_CALLBACK(end_cb)
-{
-    printf("All Done. Woohoo! :)\n");
-    printf("Hacked by Lu Wang.\n");
-    return 0;
-}
-
-DEFINE_ASYNC_CALLBACK(main__cb1);
-DEFINE_ASYNC_CALLBACK(main__cb2);
-DEFINE_ASYNC_CALLBACK(main__cb3);
-DEFINE_ASYNC_CALLBACK(main__cb4);
-DEFINE_ASYNC_CALLBACK(main__cb5);
-DEFINE_ASYNC_CALLBACK(main__cb6);
-DEFINE_ASYNC_CALLBACK(main__cb7);
-DEFINE_ASYNC_CALLBACK(main__cb8);
-DEFINE_ASYNC_CALLBACK(main__cb9);
-DEFINE_ASYNC_CALLBACK(main__cb10);
-DEFINE_ASYNC_CALLBACK(main__cb11);
-DEFINE_ASYNC_CALLBACK(main__cb12);
-static int main__loopy;
 int main(int argc, char **argv)
 {
-    async_context * ASYNC_CTX = NULL;
-    ASYNC_PUSH(end_cb);
+    int loopy;
 
 #ifdef XCURSES
     Xinitscr(argc, argv);
@@ -187,31 +130,32 @@ int main(int argc, char **argv)
     werase(treescrn8);
     touchwin(treescrn8);
     refresh();
-    SIMPLE_NAPMS(1000, main__cb1);
+    napms(1000);
 
     boxit();
     del_msg();
-    SIMPLE_NAPMS(1000, main__cb2);
+    napms(1000);
 
     seas();
     del_msg();
-    SIMPLE_NAPMS(1000, main__cb3);
+    napms(1000);
 
     greet();
     del_msg();
-    SIMPLE_NAPMS(1000, main__cb4);
+    napms(1000);
 
+    fromwho();
     del_msg();
-    SIMPLE_NAPMS(1000, main__cb5);
+    napms(1000);
 
     tree();
-    SIMPLE_NAPMS(1000, main__cb6);
+    napms(1000);
 
     balls();
-    SIMPLE_NAPMS(1000, main__cb7);
+    napms(1000);
 
     star();
-    SIMPLE_NAPMS(1000, main__cb8);
+    napms(1000);
 
     strng1();
     strng2();
@@ -383,38 +327,23 @@ int main(int argc, char **argv)
     mvwaddch(treescrn7, 11, 18, ' ');
     mvwaddch(treescrn7, 12, 14, ' ');
 
-    SIMPLE_NAPMS(1000, main__cb9);
-
-    ASYNC_PUSH(main__cb12);
-    reindeer(ASYNC_ARG1);
-    return 0;
-}
-DEFINE_ASYNC_CALLBACK(main__cb12)
-{
-    ASYNC_POP;
+    napms(1000);
+    reindeer();
 
     touchwin(w_holiday);
     wrefresh(w_holiday);
     wrefresh(w_del_msg);
 
-    SIMPLE_NAPMS(1000, main__cb10);
+    napms(1000);
 
-    main__loopy = 0;
+    for (loopy = 0; loopy < 50; loopy++)
+        blinkit();
 
-    ASYNC_SPLIT(main__cb11);
-
-    // originally this was 50, which is too slow in the browser
-    if(main__loopy < 5)
-    {
-        ++main__loopy;
-        ASYNC_PUSH(main__cb11);
-        blinkit(ASYNC_ARG1);
-        return 0;
-    }
     clear();
     refresh();
     endwin();
-    ASYNC_RETURN(0);
+
+    return 0;
 }
 
 void lil(WINDOW *win)
@@ -829,10 +758,9 @@ void strng5(void)
     wrefresh(w_del_msg);
 }
 
-static int cycle;
-DEFINE_ASYNC_CALLBACK(blinkit__cb1);
-int blinkit(DECL_ASYNC_ARG1)
+void blinkit(void)
 {
+    static int cycle;
 
     if (cycle > 4)
         cycle = 0;
@@ -864,7 +792,7 @@ int blinkit(DECL_ASYNC_ARG1)
     wrefresh(treescrn8);
     wrefresh(w_del_msg);
 
-    SIMPLE_NAPMS(50, blinkit__cb1);
+    napms(50);
     touchwin(treescrn8);
 
     /*ALL ON************************************************** */
@@ -874,63 +802,15 @@ int blinkit(DECL_ASYNC_ARG1)
     wrefresh(w_del_msg);
 
     ++cycle;
-    ASYNC_RETURN(0);
 }
 
-#define TSHOW(win, pause, fn) touchwin(win); wrefresh(win); \
-              wrefresh(w_del_msg); SIMPLE_NAPMS(pause, fn)
+#define TSHOW(win, pause) touchwin(win); wrefresh(win); \
+              wrefresh(w_del_msg); napms(pause)
 
-#define SHOW(win, pause, fn) mvwin(win, y_pos, x_pos); wrefresh(win); \
-             wrefresh(w_del_msg); SIMPLE_NAPMS(pause, fn)
+#define SHOW(win, pause) mvwin(win, y_pos, x_pos); wrefresh(win); \
+             wrefresh(w_del_msg); napms(pause)
 
-DEFINE_ASYNC_CALLBACK(reindeer__cb1);
-DEFINE_ASYNC_CALLBACK(reindeer__cb2);
-DEFINE_ASYNC_CALLBACK(reindeer__cb3);
-DEFINE_ASYNC_CALLBACK(reindeer__cb4);
-DEFINE_ASYNC_CALLBACK(reindeer__cb5);
-DEFINE_ASYNC_CALLBACK(reindeer__cb6);
-DEFINE_ASYNC_CALLBACK(reindeer__cb7);
-DEFINE_ASYNC_CALLBACK(reindeer__cb8);
-DEFINE_ASYNC_CALLBACK(reindeer__cb9);
-DEFINE_ASYNC_CALLBACK(reindeer__cb10);
-DEFINE_ASYNC_CALLBACK(reindeer__cb11);
-DEFINE_ASYNC_CALLBACK(reindeer__cb12);
-DEFINE_ASYNC_CALLBACK(reindeer__cb13);
-DEFINE_ASYNC_CALLBACK(reindeer__cb14);
-DEFINE_ASYNC_CALLBACK(reindeer__cb15);
-DEFINE_ASYNC_CALLBACK(reindeer__cb16);
-DEFINE_ASYNC_CALLBACK(reindeer__cb17);
-DEFINE_ASYNC_CALLBACK(reindeer__cb18);
-DEFINE_ASYNC_CALLBACK(reindeer__cb19);
-DEFINE_ASYNC_CALLBACK(reindeer__cb20);
-DEFINE_ASYNC_CALLBACK(reindeer__cb21);
-DEFINE_ASYNC_CALLBACK(reindeer__cb22);
-DEFINE_ASYNC_CALLBACK(reindeer__cb23);
-DEFINE_ASYNC_CALLBACK(reindeer__cb24);
-DEFINE_ASYNC_CALLBACK(reindeer__cb25);
-DEFINE_ASYNC_CALLBACK(reindeer__cb26);
-DEFINE_ASYNC_CALLBACK(reindeer__cb27);
-DEFINE_ASYNC_CALLBACK(reindeer__cb28);
-DEFINE_ASYNC_CALLBACK(reindeer__cb29);
-DEFINE_ASYNC_CALLBACK(reindeer__cb30);
-DEFINE_ASYNC_CALLBACK(reindeer__cb31);
-DEFINE_ASYNC_CALLBACK(reindeer__cb32);
-DEFINE_ASYNC_CALLBACK(reindeer__cb33);
-DEFINE_ASYNC_CALLBACK(reindeer__cb34);
-DEFINE_ASYNC_CALLBACK(reindeer__cb35);
-DEFINE_ASYNC_CALLBACK(reindeer__cb36);
-DEFINE_ASYNC_CALLBACK(reindeer__cb37);
-DEFINE_ASYNC_CALLBACK(reindeer__cb38);
-DEFINE_ASYNC_CALLBACK(reindeer__cb39);
-DEFINE_ASYNC_CALLBACK(reindeer__cb40);
-DEFINE_ASYNC_CALLBACK(reindeer__cb41);
-DEFINE_ASYNC_CALLBACK(reindeer__cb42);
-DEFINE_ASYNC_CALLBACK(reindeer__cb43);
-DEFINE_ASYNC_CALLBACK(reindeer__cb44);
-DEFINE_ASYNC_CALLBACK(reindeer__cb45);
-DEFINE_ASYNC_CALLBACK(reindeer__cb46);
-static int reindeer__looper;
-int reindeer(DECL_ASYNC_ARG1)
+void reindeer(void)
 {
     int looper;
 
@@ -982,192 +862,96 @@ int reindeer(DECL_ASYNC_ARG1)
 
     x_pos = 58;
 
-    y_pos = 2;
-//  for (y_pos = 2; y_pos < 5; y_pos++)  
-//  {
-    ASYNC_SPLIT(reindeer__cb1);
-
-    TSHOW(lildeer0, 50, reindeer__cb2);
-
-    reindeer__looper = 0;
-//  for (looper = 0; looper < 4; looper++)
-//  {
-
-    ASYNC_SPLIT(reindeer__cb3);
-
-    SHOW(lildeer3, 50, reindeer__cb4);
-    SHOW(lildeer2, 50, reindeer__cb5);
-    SHOW(lildeer1, 50, reindeer__cb6);
-    SHOW(lildeer2, 50, reindeer__cb7);
-    SHOW(lildeer3, 50, reindeer__cb8);
-
-    TSHOW(lildeer0, 50, reindeer__cb9);
-
-    // now in cb9
-    ++reindeer__looper;
-    if(reindeer__looper < 4)
+    for (y_pos = 2; y_pos < 5; y_pos++)
     {
-        // go back to __cb3 for the inner loop
-        ASYNC_PUSH(reindeer__cb3);
-        ASYNC_RETURN(0);
-    }
-//  }
+        TSHOW(lildeer0, 50);
 
-    ++ y_pos;
-    if(y_pos < 5)
-    {
-        // go back to __cb 1 for the outer loop
-        ASYNC_PUSH(reindeer__cb1);
-        ASYNC_RETURN(0);
+        for (looper = 0; looper < 4; looper++)
+        {
+            SHOW(lildeer3, 50);
+            SHOW(lildeer2, 50);
+            SHOW(lildeer1, 50);
+            SHOW(lildeer2, 50);
+            SHOW(lildeer3, 50);
+
+            TSHOW(lildeer0, 50);
+
+            x_pos -= 2;
+        }
     }
-//  }
-   
-    x_pos -= 2;
 
     x_pos = 35;
 
-    y_pos = 5;
-
-//  for (y_pos = 5; y_pos < 10; y_pos++)
-//  {
-
-    ASYNC_SPLIT(reindeer__cb10);
-
-    touchwin(middeer0);
-    wrefresh(middeer0);
-    wrefresh(w_del_msg);
-
-    reindeer__looper = 0;
-//  for (looper = 0; looper < 2; looper++)
-//  {
-
-    ASYNC_SPLIT(reindeer__cb11);
-
-    SHOW(middeer3, 50, reindeer__cb12);
-    SHOW(middeer2, 50, reindeer__cb13);
-    SHOW(middeer1, 50, reindeer__cb14);
-    SHOW(middeer2, 50, reindeer__cb15);
-    SHOW(middeer3, 50, reindeer__cb16);
-
-    TSHOW(middeer0, 50, reindeer__cb17);
-
-    x_pos -= 3;
-
-    ++reindeer__looper;
-    if(reindeer__looper < 2)
+    for (y_pos = 5; y_pos < 10; y_pos++)
     {
-        // inner loop
-        ASYNC_PUSH(reindeer__cb11);
-        ASYNC_RETURN(0);
+        touchwin(middeer0);
+        wrefresh(middeer0);
+        wrefresh(w_del_msg);
+
+        for (looper = 0; looper < 2; looper++)
+        {
+            SHOW(middeer3, 50);
+            SHOW(middeer2, 50);
+            SHOW(middeer1, 50);
+            SHOW(middeer2, 50);
+            SHOW(middeer3, 50);
+
+            TSHOW(middeer0, 50);
+
+            x_pos -= 3;
+        }
     }
-//  }
 
-    ++y_pos;
-    if(y_pos < 10)
-    {
-        // outer loop
-        ASYNC_PUSH(reindeer__cb10);
-        ASYNC_RETURN(0);
-    }
-//  }
-
-
-    SIMPLE_NAPMS(2000, reindeer__cb18);
+    napms(2000);
 
     y_pos = 1;
 
-    x_pos = 8;
-//  for (x_pos = 8; x_pos < 16; x_pos++)
-//  {
-    ASYNC_SPLIT(reindeer__cb19);
-
-    SHOW(bigdeer4, 30, reindeer__cb20);
-    SHOW(bigdeer3, 30, reindeer__cb21);
-    SHOW(bigdeer2, 30, reindeer__cb22);
-    SHOW(bigdeer1, 30, reindeer__cb23);
-    SHOW(bigdeer2, 30, reindeer__cb24);
-    SHOW(bigdeer3, 30, reindeer__cb25);
-    SHOW(bigdeer4, 30, reindeer__cb26);
-    SHOW(bigdeer0, 30, reindeer__cb27);
-
-    ++x_pos;
-    if(x_pos < 16)
+    for (x_pos = 8; x_pos < 16; x_pos++)
     {
-        // loop
-        ASYNC_PUSH(reindeer__cb19);
-        ASYNC_RETURN(0);
+        SHOW(bigdeer4, 30);
+        SHOW(bigdeer3, 30);
+        SHOW(bigdeer2, 30);
+        SHOW(bigdeer1, 30);
+        SHOW(bigdeer2, 30);
+        SHOW(bigdeer3, 30);
+        SHOW(bigdeer4, 30);
+        SHOW(bigdeer0, 30);
     }
-//  }
 
     --x_pos;
 
-    reindeer__looper = 0;
-//  for (looper = 0; looper < 6; looper++)
-//  {
-    ASYNC_SPLIT(reindeer__cb28);
-
-    SHOW(lookdeer4, 40, reindeer__cb29);
-    SHOW(lookdeer3, 40, reindeer__cb30);
-    SHOW(lookdeer2, 40, reindeer__cb31);
-    SHOW(lookdeer1, 40, reindeer__cb32);
-    SHOW(lookdeer2, 40, reindeer__cb33);
-    SHOW(lookdeer3, 40, reindeer__cb34);
-    SHOW(lookdeer4, 40, reindeer__cb35);
-
-    ++ reindeer__looper;
-    if(reindeer__looper < 6)
+    for (looper = 0; looper < 6; looper++)
     {
-        //loop
-        ASYNC_PUSH(reindeer__cb28);
-        ASYNC_RETURN(0);
+        SHOW(lookdeer4, 40);
+        SHOW(lookdeer3, 40);
+        SHOW(lookdeer2, 40);
+        SHOW(lookdeer1, 40);
+        SHOW(lookdeer2, 40);
+        SHOW(lookdeer3, 40);
+        SHOW(lookdeer4, 40);
     }
-//  }
 
-    SHOW(lookdeer0, 40, reindeer__cb36);
+    SHOW(lookdeer0, 40);
 
-
-//  for (; y_pos < 10; y_pos++)
-//  {
-//
-    ASYNC_SPLIT(reindeer__cb37);
-    reindeer__looper = 0;
-
-//  for (looper = 0; looper < 2; looper++)
-//  {
-    ASYNC_SPLIT(reindeer__cb38);
-
-    SHOW(bigdeer4, 30, reindeer__cb39);
-    SHOW(bigdeer3, 30, reindeer__cb40);
-    SHOW(bigdeer2, 30, reindeer__cb41);
-    SHOW(bigdeer1, 30, reindeer__cb42);
-    SHOW(bigdeer2, 30, reindeer__cb43);
-    SHOW(bigdeer3, 30, reindeer__cb44);
-    SHOW(bigdeer4, 30, reindeer__cb45);
-
-    ++reindeer__looper;
-    if(reindeer__looper < 2)
+    for (; y_pos < 10; y_pos++)
     {
-        // loop
-        ASYNC_PUSH(reindeer__cb38);
-        ASYNC_RETURN(0);
-    }
-//  }
+        for (looper = 0; looper < 2; looper++)
+        {
+            SHOW(bigdeer4, 30);
+            SHOW(bigdeer3, 30);
+            SHOW(bigdeer2, 30);
+            SHOW(bigdeer1, 30);
+            SHOW(bigdeer2, 30);
+            SHOW(bigdeer3, 30);
+            SHOW(bigdeer4, 30);
+        }
 
-    SHOW(bigdeer0, 30, reindeer__cb46);
-
-    ++y_pos;
-    if(y_pos < 10)
-    {
-        ASYNC_PUSH(reindeer__cb37);
-        ASYNC_RETURN(0);
+        SHOW(bigdeer0, 30);
     }
-//  }
 
     --y_pos;
 
     mvwin(lookdeer3, y_pos, x_pos);
     wrefresh(lookdeer3);
     wrefresh(w_del_msg);
-
-    ASYNC_RETURN(0);
 }

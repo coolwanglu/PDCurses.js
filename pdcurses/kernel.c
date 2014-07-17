@@ -202,22 +202,12 @@ int curs_set(int visibility)
     return ret_vis;
 }
 
-// for emscripten
 int napms(int ms)
 {
     PDC_LOG(("napms() - called: ms=%d\n", ms));
 
     if (ms)
         PDC_napms(ms);
-
-    return OK;
-}
-int napms_async(int ms, void (*callback)(void*))
-{
-    PDC_LOG(("napms_async() - called: ms=%d\n", ms));
-
-    if (ms)
-        PDC_napms_async(ms, callback);
 
     return OK;
 }
@@ -237,18 +227,11 @@ int ripoffline(int line, int (*init)(WINDOW *, int))
     return ERR;
 }
 
-// for emscripten
 int draino(int ms)
 {
     PDC_LOG(("draino() - called\n"));
 
     return napms(ms);
-}
-int draino_async(int ms, void (*callback)(void*))
-{
-    PDC_LOG(("draino_async() - called\n"));
-
-    return napms_async(ms, callback);
 }
 
 int resetterm(void)

@@ -883,7 +883,6 @@ int     attr_on(attr_t, void *);
 int     attr_set(attr_t, short, void *);
 int     baudrate(void);
 int     beep(void);
-int     beep_async(void (*)(void*));
 int     bkgd(chtype);
 void    bkgdset(chtype);
 int     border(chtype, chtype, chtype, chtype, chtype, chtype, chtype, chtype);
@@ -916,11 +915,9 @@ char    erasechar(void);
 int     erase(void);
 void    filter(void);
 int     flash(void);
-int     flash_async(void (*)(void*));
 int     flushinp(void);
 chtype  getbkgd(WINDOW *);
 int     getnstr(char *, int);
-int     getnstr_async(char *, int, void (*)(void*));
 int     getstr(char *);
 WINDOW *getwin(FILE *);
 int     halfdelay(int);
@@ -965,7 +962,6 @@ int     mvcur(int, int, int, int);
 int     mvdelch(int, int);
 int     mvderwin(WINDOW *, int, int);
 int     mvgetch(int, int);
-int     mvgetch_async(int, int, void (*)(void*));
 int     mvgetnstr(int, int, char *, int);
 int     mvgetstr(int, int, char *);
 int     mvhline(int, int, chtype, int);
@@ -988,7 +984,6 @@ int     mvwaddstr(WINDOW *, int, int, const char *);
 int     mvwchgat(WINDOW *, int, int, int, attr_t, short, const void *);
 int     mvwdelch(WINDOW *, int, int);
 int     mvwgetch(WINDOW *, int, int);
-int     mvwgetch_async(WINDOW *, int, int, void (*)(void*));
 int     mvwgetnstr(WINDOW *, int, int, char *, int);
 int     mvwgetstr(WINDOW *, int, int, char *);
 int     mvwhline(WINDOW *, int, int, chtype, int);
@@ -1005,7 +1000,6 @@ int     mvwprintw(WINDOW *, int, int, const char *, ...);
 int     mvwscanw(WINDOW *, int, int, const char *, ...);
 int     mvwvline(WINDOW *, int, int, chtype, int);
 int     napms(int);
-int     napms_async(int, void (*)(void*));
 WINDOW *newpad(int, int);
 SCREEN *newterm(const char *, FILE *, FILE *);
 WINDOW *newwin(int, int, int, int);
@@ -1110,7 +1104,6 @@ int     wdeleteln(WINDOW *);
 int     wechochar(WINDOW *, const chtype);
 int     werase(WINDOW *);
 int     wgetch(WINDOW *);
-int     wgetch_async(WINDOW *, void (*)(void*));
 int     wgetnstr(WINDOW *, char *, int);
 int     wgetstr(WINDOW *, char *);
 int     whline(WINDOW *, chtype, int);
@@ -1257,7 +1250,6 @@ char   *unctrl(chtype);
 int     crmode(void);
 int     nocrmode(void);
 int     draino(int);
-int     draino_async(int, void (*)(void*));
 int     resetterm(void);
 int     fixterm(void);
 int     saveterm(void);
@@ -1345,9 +1337,6 @@ int     sb_refresh(void);
 
 #define getch()            wgetch(stdscr)
 #define ungetch(ch)        PDC_ungetch(ch)
-
-// for emscripten
-#define getch_async(callback)            wgetch_async(stdscr, callback)
 
 #define COLOR_PAIR(n)      (((chtype)(n) << PDC_COLOR_SHIFT) & A_COLOR)
 #define PAIR_NUMBER(n)     (((n) & A_COLOR) >> PDC_COLOR_SHIFT)

@@ -16,16 +16,6 @@
 PDCEX SDL_Surface *pdc_screen;
 PDCEX int pdc_yoffset;
 
-void async_cb1(void *arg)
-{
-    endwin();
-}
-void async_cb(void *arg)
-{
-    addstr("Press any key to exit.");
-    getch_async(async_cb1);
-}
-
 int main(int argc, char **argv)
 {
     char inp[60];
@@ -81,6 +71,11 @@ int main(int argc, char **argv)
     addstr("PDCurses for SDL");
     attroff(A_UNDERLINE);
     addstr(".\nYour comments here: ");
-    getnstr_async(inp, 59, async_cb);
+    getnstr(inp, 59);
+    addstr("Press any key to exit.");
+
+//    getch();
+    endwin();
+
     return 0;
 }
