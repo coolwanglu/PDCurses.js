@@ -3,13 +3,13 @@ by Lu Wang
 
 ### Demos (most interesting first)
 
-- [xmas](http://coolwanglu.github.io/PDCurses-emscripten/xmas.html)
-- [newdemo](http://coolwanglu.github.io/PDCurses-emscripten/newdemo.html)
-- [worm](http://coolwanglu.github.io/PDCurses-emscripten/worm.html)
-- [firework](http://coolwanglu.github.io/PDCurses-emscripten/firework.html)
-- [rain](http://coolwanglu.github.io/PDCurses-emscripten/rain.html)
-- [sdltest](http://coolwanglu.github.io/PDCurses-emscripten/sdltest.html)
-- [ptest](http://coolwanglu.github.io/PDCurses-emscripten/ptest.html)
+- [xmas](http://coolwanglu.github.io/PDCurses.js/xmas.html)
+- [newdemo](http://coolwanglu.github.io/PDCurses.js/newdemo.html)
+- [worm](http://coolwanglu.github.io/PDCurses.js/worm.html)
+- [firework](http://coolwanglu.github.io/PDCurses.js/firework.html)
+- [rain](http://coolwanglu.github.io/PDCurses.js/rain.html)
+- [sdltest](http://coolwanglu.github.io/PDCurses.js/sdltest.html)
+- [ptest](http://coolwanglu.github.io/PDCurses.js/ptest.html)
 
 
 ### Status
